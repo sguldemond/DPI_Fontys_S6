@@ -6,6 +6,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
 import javax.swing.DefaultListModel;
@@ -15,10 +16,10 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 
+import com.rabbitmq.client.RpcClient;
 import mix.IFrame;
 import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
-import mix.messaging.RequestReply;
 import mix.model.bank.BankInterestReply;
 import mix.model.bank.BankInterestRequest;
 import mix.model.loan.LoanRequest;
@@ -29,6 +30,8 @@ public class LoanBrokerFrame extends IFrame {
 	private JPanel contentPane;
 	private DefaultListModel<JListLine> listModel = new DefaultListModel<JListLine>();
 	private JList<JListLine> list;
+
+	private HashMap<String, Serializable> corrRR = new HashMap<>();
 
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
@@ -94,9 +97,11 @@ public class LoanBrokerFrame extends IFrame {
 	}
 
 	@Override
-	public void add(Serializable component){
+	public void add(Serializable component, String corrId){
+	    corrRR.put(corrId, component);
+
 	    if(component.getClass() == LoanRequest.class) {
-            listModel.addElement(new JListLine((LoanRequest) component));
+            add((LoanRequest) component);
 
             try {
                 BankInterestRequest bankInterestRequest = new BankInterestRequest((LoanRequest) component);
@@ -107,14 +112,19 @@ public class LoanBrokerFrame extends IFrame {
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }
-        } else if (component.getClass() == RequestReply.class) {
+        } else if (component.getClass() == BankInterestReply.class) {
+            RpcClient rpcClient;
 
         } else {
 	        return;
         }
     }
 
-	public void add(LoanRequest loanRequest,BankInterestRequest bankRequest){
+    public void add(LoanRequest loanRequest){
+        listModel.addElement(new JListLine(loanRequest));
+    }
+
+    public void add(LoanRequest loanRequest,BankInterestRequest bankRequest){
 		JListLine rr = getRequestReply(loanRequest);
 		if (rr!= null && bankRequest != null) {
 			rr.setBankRequest(bankRequest);

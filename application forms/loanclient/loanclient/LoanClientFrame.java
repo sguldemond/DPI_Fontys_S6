@@ -190,7 +190,7 @@ public class LoanClientFrame extends IFrame {
 	}
 
     @Override
-    public void add(Serializable component) {
+    public void add(Serializable component, String corrId) {
         return;
     }
 }

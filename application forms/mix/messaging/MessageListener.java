@@ -39,7 +39,7 @@ public class MessageListener<T extends Serializable> {
                     T requestReply = (T) SerializeUtil.deserialize(body);
                     System.out.println(" [x] Received '" + requestReply.toString() + "'");
 
-                    frame.add(requestReply);
+                    frame.add(requestReply, properties.getCorrelationId());
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }

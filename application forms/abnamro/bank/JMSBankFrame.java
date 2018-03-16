@@ -37,12 +37,7 @@ public class JMSBankFrame extends IFrame {
 	private JTextField tfReply;
 	private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
 
-    private String BANK_REQUEST_QUEUE = "bankRequestQueue";
-    private ConnectionFactory factory = new ConnectionFactory();
-    private Connection connection;
-    private Channel channel;
-
-    private MessageSender<RequestReply<BankInterestRequest, BankInterestReply>> bankInterestReplySender;
+    private MessageSender<BankInterestReply> bankInterestReplySender;
 
     /**
 	 * Launch the application.
@@ -124,7 +119,7 @@ public class JMSBankFrame extends IFrame {
 					// TODO: sent JMS message with the reply to Loan Broker
 
                     try {
-                        bankInterestReplySender.send(rr);
+                        bankInterestReplySender.send(reply);
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -139,7 +134,7 @@ public class JMSBankFrame extends IFrame {
 	}
 
 	@Override
-    public void add(Serializable component){
+    public void add(Serializable component, String corrId) {
 	    RequestReply<BankInterestRequest, BankInterestReply> requestReply = new RequestReply<>((BankInterestRequest) component, null);
         listModel.addElement(requestReply);
     }

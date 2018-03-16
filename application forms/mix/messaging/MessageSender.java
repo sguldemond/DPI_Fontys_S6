@@ -1,12 +1,13 @@
 package mix.messaging;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.*;
 import mix.SerializeUtil;
-import mix.model.bank.BankInterestRequest;
+import mix.model.bank.BankInterestReply;
 
 import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -15,6 +16,8 @@ import java.util.concurrent.TimeoutException;
 public class MessageSender<T> {
     private String queueName;
     private Channel channel;
+
+    private String replyQueueName;
 
     public MessageSender(String queueName) throws IOException, TimeoutException {
         this.queueName = queueName;
@@ -25,11 +28,52 @@ public class MessageSender<T> {
 
         channel = connection.createChannel();
         channel.queueDeclare(queueName, false, false, false, null);
+
+        replyQueueName = channel.queueDeclare().getQueue();
     }
 
     public void send(T requestReply) throws IOException {
-        channel.basicPublish("", queueName, null, SerializeUtil.serialize(requestReply));
+        final String corrId = UUID.randomUUID().toString();
+
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(corrId)
+                .replyTo(replyQueueName)
+                .build();
+
+        channel.basicPublish("", queueName, props, SerializeUtil.serialize(requestReply));
+
         System.out.println(" [x] Sent '" + requestReply.toString() + "'");
     }
+
+    public BankInterestReply call(T requestReply) throws IOException, InterruptedException {
+        final String corrId = UUID.randomUUID().toString();
+
+        AMQP.BasicProperties props = new AMQP.BasicProperties
+                .Builder()
+                .correlationId(corrId)
+                .replyTo(replyQueueName)
+                .build();
+
+        channel.basicPublish("", queueName, props, SerializeUtil.serialize(requestReply));
+
+        final BlockingQueue<BankInterestReply> response = new ArrayBlockingQueue<BankInterestReply>(1);
+
+        channel.basicConsume(replyQueueName, true, new DefaultConsumer(channel) {
+            @Override
+            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
+                if (properties.getCorrelationId().equals(corrId)) {
+                    try {
+                        response.offer((BankInterestReply) SerializeUtil.deserialize(body));
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        return response.take();
+    }
+
 
 }
