@@ -32,8 +32,8 @@ public class MessageSender<T> {
         replyQueueName = channel.queueDeclare().getQueue();
     }
 
-    public void send(T requestReply) throws IOException {
-        final String corrId = UUID.randomUUID().toString();
+    public String send(T requestReply, String corrId) throws IOException {
+        if(corrId == null) corrId = UUID.randomUUID().toString();
 
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
@@ -43,7 +43,9 @@ public class MessageSender<T> {
 
         channel.basicPublish("", queueName, props, SerializeUtil.serialize(requestReply));
 
-        System.out.println(" [x] Sent '" + requestReply.toString() + "'");
+        System.out.println(" [x] Sent '" + requestReply.toString() + "' with corrId '" + corrId + "'");
+
+        return corrId;
     }
 
     public BankInterestReply call(T requestReply) throws IOException, InterruptedException {

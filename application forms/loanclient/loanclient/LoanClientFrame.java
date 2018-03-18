@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
 import javax.swing.DefaultListModel;
@@ -20,8 +21,10 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
 import mix.IFrame;
+import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
 import mix.messaging.RequestReply;
+import mix.model.bank.BankInterestReply;
 import mix.model.loan.LoanReply;
 import mix.model.loan.LoanRequest;
 
@@ -42,6 +45,7 @@ public class LoanClientFrame extends IFrame {
 	private JTextField tfTime;
 
     private MessageSender<LoanRequest> loanRequestSender;
+    private HashMap<String, Serializable> corrMap = new HashMap<>();
 
 	/**
 	 * Create the frame.
@@ -49,6 +53,10 @@ public class LoanClientFrame extends IFrame {
 	public LoanClientFrame() {
         try {
             loanRequestSender = new MessageSender<>("LOAN_QUEUE");
+
+            MessageListener<LoanReply> loanReplyListener = new MessageListener<>(this, "CLIENT_QUEUE");
+            loanReplyListener.listen();
+
         } catch (IOException | TimeoutException e) {
             e.printStackTrace();
         }
@@ -131,8 +139,9 @@ public class LoanClientFrame extends IFrame {
 				// TODO:  send the JMS with request to Loan Broker
 
                 try {
-                    loanRequestSender.send(request);
-                } catch (IOException e) {
+					String corrId = loanRequestSender.send(request, null);
+					corrMap.put(corrId, request);
+				} catch (IOException e) {
                     e.printStackTrace();
                 }
             }
@@ -191,6 +200,10 @@ public class LoanClientFrame extends IFrame {
 
     @Override
     public void add(Serializable component, String corrId) {
-        return;
-    }
+   		LoanRequest loanRequest = (LoanRequest) corrMap.get(corrId);
+
+		RequestReply<LoanRequest, LoanReply> requestReply = getRequestReply(loanRequest);
+		requestReply.setReply((LoanReply) component);
+   }
+
 }

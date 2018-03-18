@@ -60,11 +60,4 @@ public class LoanRequest implements Serializable {
         return "ssn=" + String.valueOf(ssn) + " amount=" + String.valueOf(amount) + " time=" + String.valueOf(time);
     }
 
-    public byte[] serialize() throws IOException {
-        return SerializeUtil.serialize(this);
-    }
-
-    public LoanRequest deserialize(byte[] data) throws IOException, ClassNotFoundException {
-        return (LoanRequest) SerializeUtil.deserialize(data);
-    }
 }

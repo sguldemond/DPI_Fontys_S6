@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
 import javax.swing.DefaultListModel;
@@ -38,6 +39,8 @@ public class JMSBankFrame extends IFrame {
 	private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
 
     private MessageSender<BankInterestReply> bankInterestReplySender;
+
+    protected HashMap<Serializable, String> corrMap = new HashMap<>();
 
     /**
 	 * Launch the application.
@@ -119,7 +122,7 @@ public class JMSBankFrame extends IFrame {
 					// TODO: sent JMS message with the reply to Loan Broker
 
                     try {
-                        bankInterestReplySender.send(reply);
+                        bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()));
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -135,7 +138,10 @@ public class JMSBankFrame extends IFrame {
 
 	@Override
     public void add(Serializable component, String corrId) {
-	    RequestReply<BankInterestRequest, BankInterestReply> requestReply = new RequestReply<>((BankInterestRequest) component, null);
+		BankInterestRequest bankRequest = (BankInterestRequest) component;
+        corrMap.put(bankRequest, corrId);
+
+        RequestReply<BankInterestRequest, BankInterestReply> requestReply = new RequestReply<>(bankRequest, null);
         listModel.addElement(requestReply);
     }
 

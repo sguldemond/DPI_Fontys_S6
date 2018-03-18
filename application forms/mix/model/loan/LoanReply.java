@@ -46,12 +46,4 @@ public class LoanReply implements Serializable {
     public String toString(){
         return " interest="+String.valueOf(interest) + " quoteID="+String.valueOf(bankID);
     }
-
-    public byte[] serialize() throws IOException {
-        return SerializeUtil.serialize(this);
-    }
-
-    public LoanReply deserialize(byte[] data) throws IOException, ClassNotFoundException {
-        return (LoanReply) SerializeUtil.deserialize(data);
-    }
 }

@@ -22,6 +22,7 @@ import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
 import mix.model.bank.BankInterestReply;
 import mix.model.bank.BankInterestRequest;
+import mix.model.loan.LoanReply;
 import mix.model.loan.LoanRequest;
 
 public class LoanBrokerFrame extends IFrame {
@@ -31,7 +32,7 @@ public class LoanBrokerFrame extends IFrame {
 	private DefaultListModel<JListLine> listModel = new DefaultListModel<JListLine>();
 	private JList<JListLine> list;
 
-	private HashMap<String, Serializable> corrRR = new HashMap<>();
+	private HashMap<String, Serializable> corrMap = new HashMap<>();
 
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
@@ -98,25 +99,32 @@ public class LoanBrokerFrame extends IFrame {
 
 	@Override
 	public void add(Serializable component, String corrId){
-	    corrRR.put(corrId, component);
-
 	    if(component.getClass() == LoanRequest.class) {
+            corrMap.put(corrId, component);
+
             add((LoanRequest) component);
 
             try {
                 BankInterestRequest bankInterestRequest = new BankInterestRequest((LoanRequest) component);
 
                 MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>("BANK_QUEUE");
-                bankInterestRequestSender.send(bankInterestRequest);
+                bankInterestRequestSender.send(bankInterestRequest, corrId);
 
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }
         } else if (component.getClass() == BankInterestReply.class) {
-            RpcClient rpcClient;
+	        BankInterestReply bankReply = (BankInterestReply) component;
+            add((LoanRequest) corrMap.get(corrId), bankReply);
 
-        } else {
-	        return;
+            try {
+                LoanReply loanReply = new LoanReply(bankReply.getInterest(), null);
+
+                MessageSender<LoanReply> loanReplySender = new MessageSender<>("CLIENT_QUEUE");
+                loanReplySender.send(loanReply, corrId);
+            } catch (IOException | TimeoutException e) {
+                e.printStackTrace();
+            }
         }
     }
 
