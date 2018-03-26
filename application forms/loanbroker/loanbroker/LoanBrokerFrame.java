@@ -107,8 +107,18 @@ public class LoanBrokerFrame extends IFrame {
             try {
                 BankInterestRequest bankInterestRequest = new BankInterestRequest((LoanRequest) component);
 
-                MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>("BANK_QUEUE");
-                bankInterestRequestSender.send(bankInterestRequest, corrId);
+                String queueName;
+
+                if(bankInterestRequest.getAmount() > 100) {
+                	queueName = "ABN_QUEUE";
+				} else {
+                	queueName = "ING_QUEUE";
+				}
+
+				// TODO: send multiple messages
+
+                MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>(queueName);
+                bankInterestRequestSender.send(bankInterestRequest, corrId, null);
 
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
@@ -121,7 +131,7 @@ public class LoanBrokerFrame extends IFrame {
                 LoanReply loanReply = new LoanReply(bankReply.getInterest(), null);
 
                 MessageSender<LoanReply> loanReplySender = new MessageSender<>("CLIENT_QUEUE");
-                loanReplySender.send(loanReply, corrId);
+                loanReplySender.send(loanReply, corrId, null);
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }

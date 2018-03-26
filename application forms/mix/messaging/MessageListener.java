@@ -50,4 +50,7 @@ public class MessageListener<T extends Serializable> {
         channel.basicConsume(queueName, true, consumer);
     }
 
+    public String getQueueName() {
+        return queueName;
+    }
 }

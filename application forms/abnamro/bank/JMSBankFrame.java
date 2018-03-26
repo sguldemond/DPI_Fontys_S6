@@ -10,14 +10,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import com.rabbitmq.client.*;
@@ -28,7 +21,7 @@ import mix.messaging.RequestReply;
 import mix.model.bank.BankInterestReply;
 import mix.model.bank.BankInterestRequest;
 
-public class JMSBankFrame extends IFrame {
+public class JMSBankFrame extends IFrame implements ActionListener {
 
 	/**
 	 * 
@@ -36,9 +29,12 @@ public class JMSBankFrame extends IFrame {
 	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
 	private JTextField tfReply;
+	private JComboBox cbBank;
 	private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
 
     private MessageSender<BankInterestReply> bankInterestReplySender;
+    private String[] banks = { "ABN", "ING", "RABO" };
+    private String activeBank = banks[0];
 
     protected HashMap<Serializable, String> corrMap = new HashMap<>();
 
@@ -61,13 +57,15 @@ public class JMSBankFrame extends IFrame {
 	/**
 	 * Create the frame.
 	 */
-	public JMSBankFrame() throws IOException, TimeoutException {
-        MessageListener<BankInterestRequest> bankInterestRequestListener = new MessageListener<>(this,"BANK_QUEUE");
-	    bankInterestRequestListener.listen();
+	public JMSBankFrame() {
+        try {
+            startListener();
+            bankInterestReplySender = new MessageSender<>("BROKER_QUEUE");
+        } catch (IOException | TimeoutException e) {
+            e.printStackTrace();
+        }
 
-	    bankInterestReplySender = new MessageSender<>("BROKER_QUEUE");
-
-        setTitle("JMS Bank - ABN AMRO");
+        setTitle(banks[0]);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
@@ -115,14 +113,14 @@ public class JMSBankFrame extends IFrame {
 			public void actionPerformed(ActionEvent e) {
 				RequestReply<BankInterestRequest, BankInterestReply> rr = list.getSelectedValue();
 				double interest = Double.parseDouble((tfReply.getText()));
-				BankInterestReply reply = new BankInterestReply(interest,"ABN AMRO");
+				BankInterestReply reply = new BankInterestReply(interest,activeBank);
 				if (rr!= null && reply != null){
 					rr.setReply(reply);
 	                list.repaint();
 					// TODO: sent JMS message with the reply to Loan Broker
 
                     try {
-                        bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()));
+                        bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()), null);
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -134,6 +132,19 @@ public class JMSBankFrame extends IFrame {
 		gbc_btnSendReply.gridx = 4;
 		gbc_btnSendReply.gridy = 1;
 		contentPane.add(btnSendReply, gbc_btnSendReply);
+
+		// TODO: implement bank changer
+		cbBank = new JComboBox(banks);
+		GridBagConstraints gbc_cbBank = new GridBagConstraints();
+		gbc_cbBank.gridwidth = 2;
+		gbc_cbBank.insets = new Insets(0, 0, 0, 5);
+		gbc_cbBank.fill = GridBagConstraints.HORIZONTAL;
+		gbc_cbBank.gridx = 1;
+		gbc_cbBank.gridy = 2;
+		contentPane.add(cbBank, gbc_cbBank);
+
+		cbBank.addActionListener(this);
+
 	}
 
 	@Override
@@ -145,4 +156,22 @@ public class JMSBankFrame extends IFrame {
         listModel.addElement(requestReply);
     }
 
+    private void startListener() throws IOException, TimeoutException {
+        MessageListener<BankInterestRequest> bankInterestRequestListener = new MessageListener<>(this,activeBank + "_QUEUE");
+        bankInterestRequestListener.listen();
+        System.out.println("CURRENT QUEUE NAME: " + bankInterestRequestListener.getQueueName());
+    }
+
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		JComboBox cb = (JComboBox)e.getSource();
+		activeBank = (String)cb.getSelectedItem();
+		setTitle(activeBank);
+
+		try {
+            startListener();
+        } catch (IOException | TimeoutException e1) {
+            e1.printStackTrace();
+        }
+    }
 }

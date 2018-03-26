@@ -17,8 +17,6 @@ public class MessageSender<T> {
     private String queueName;
     private Channel channel;
 
-    private String replyQueueName;
-
     public MessageSender(String queueName) throws IOException, TimeoutException {
         this.queueName = queueName;
 
@@ -28,54 +26,21 @@ public class MessageSender<T> {
 
         channel = connection.createChannel();
         channel.queueDeclare(queueName, false, false, false, null);
-
-        replyQueueName = channel.queueDeclare().getQueue();
     }
 
-    public String send(T requestReply, String corrId) throws IOException {
+    public String send(T requestReply, String corrId, String queueName) throws IOException {
         if(corrId == null) corrId = UUID.randomUUID().toString();
+        if(queueName != null) this.queueName = queueName;
 
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(corrId)
-                .replyTo(replyQueueName)
                 .build();
 
-        channel.basicPublish("", queueName, props, SerializeUtil.serialize(requestReply));
+        channel.basicPublish("", this.queueName, props, SerializeUtil.serialize(requestReply));
 
         System.out.println(" [x] Sent '" + requestReply.toString() + "' with corrId '" + corrId + "'");
 
         return corrId;
     }
-
-    public BankInterestReply call(T requestReply) throws IOException, InterruptedException {
-        final String corrId = UUID.randomUUID().toString();
-
-        AMQP.BasicProperties props = new AMQP.BasicProperties
-                .Builder()
-                .correlationId(corrId)
-                .replyTo(replyQueueName)
-                .build();
-
-        channel.basicPublish("", queueName, props, SerializeUtil.serialize(requestReply));
-
-        final BlockingQueue<BankInterestReply> response = new ArrayBlockingQueue<BankInterestReply>(1);
-
-        channel.basicConsume(replyQueueName, true, new DefaultConsumer(channel) {
-            @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
-                if (properties.getCorrelationId().equals(corrId)) {
-                    try {
-                        response.offer((BankInterestReply) SerializeUtil.deserialize(body));
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        return response.take();
-    }
-
-
 }
