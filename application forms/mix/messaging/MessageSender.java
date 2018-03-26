@@ -32,6 +32,8 @@ public class MessageSender<T> {
         if(corrId == null) corrId = UUID.randomUUID().toString();
         if(queueName != null) this.queueName = queueName;
 
+        // this is a test for switching branches
+
         AMQP.BasicProperties props = new AMQP.BasicProperties
                 .Builder()
                 .correlationId(corrId)
