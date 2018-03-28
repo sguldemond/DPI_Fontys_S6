@@ -19,6 +19,7 @@ import javax.swing.border.EmptyBorder;
 
 import mix.IFrame;
 import mix.messaging.MessageListener;
+import mix.messaging.MessageListenerFanout;
 import mix.messaging.MessageSender;
 import mix.model.bank.BankInterestReply;
 import mix.model.bank.BankInterestRequest;
@@ -35,7 +36,6 @@ public class LoanBrokerFrame extends IFrame {
 	private HashMap<String, Serializable> corrMap = new HashMap<>();
 
 	private int aggregationId = 0;
-	private HashMap<Integer, Integer[]> aggMap = new HashMap<>();
     private HashMap<Integer, BankInterestReply[]> receivedReplies = new HashMap<>();
 
 
@@ -57,8 +57,11 @@ public class LoanBrokerFrame extends IFrame {
 	 */
 	public LoanBrokerFrame() {
         try {
-            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "CLIENT_BROKER_QUEUE");
-            loanRequestListener.listen();
+//            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "CLIENT_BROKER_QUEUE");
+//            loanRequestListener.listen();
+
+            MessageListenerFanout<LoanRequest> loanRequestListenerFanout = new MessageListenerFanout<>("CLIENT_BROKER_EXCHANGE", this);
+            loanRequestListenerFanout.listen();
 
             MessageListener<BankInterestReply> bankInterestReplyListener = new MessageListener<>(this, "BANK_BROKER_QUEUE");
             bankInterestReplyListener.listen();
@@ -131,8 +134,6 @@ public class LoanBrokerFrame extends IFrame {
 				    bankInterestRequest.setAggregationId(aggregationId);
                     bankInterestRequestSender.send(bankInterestRequest, corrId);
 
-                    aggMap.put(aggregationId, new Integer[]{bankQueues.size(), 0});
-
                     receivedReplies.put(aggregationId, new BankInterestReply[bankQueues.size()]);
                 }
 
@@ -165,16 +166,6 @@ public class LoanBrokerFrame extends IFrame {
             }
 
             add((LoanRequest) corrMap.get(corrId), bestBankReply);
-
-//            Integer[] er = aggMap.get(bankReply.getAggregationId());
-//            er[1]++;
-//
-//            if(!er[0].equals(er[1])) {
-//                System.out.println(" [*] Waiting for more replies on aggregation id '" + er[1] + "'...");
-//                return;
-//            }
-//
-//            add((LoanRequest) corrMap.get(corrId), bankReply);
 
             try {
                 LoanReply loanReply = new LoanReply(bestBankReply.getInterest(), bestBankReply.getQuoteId());

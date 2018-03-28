@@ -24,6 +24,7 @@ import javax.swing.border.EmptyBorder;
 import mix.IFrame;
 import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
+import mix.messaging.MessageSenderFanout;
 import mix.messaging.RequestReply;
 import mix.model.bank.BankInterestReply;
 import mix.model.loan.LoanReply;
@@ -45,7 +46,9 @@ public class LoanClientFrame extends IFrame {
     private JLabel lblNewLabel_1;
     private JTextField tfTime;
 
-    private MessageSender<LoanRequest> loanRequestSender;
+//    private MessageSender<LoanRequest> loanRequestSender;
+    private MessageSenderFanout<LoanRequest> loanRequestSenderFanout;
+
     private HashMap<String, Serializable> corrMap = new HashMap<>();
 
     /**
@@ -53,7 +56,8 @@ public class LoanClientFrame extends IFrame {
      */
     public LoanClientFrame() {
         try {
-            loanRequestSender = new MessageSender<>("CLIENT_BROKER_QUEUE");
+//            loanRequestSender = new MessageSender<>("CLIENT_BROKER_QUEUE");
+            loanRequestSenderFanout = new MessageSenderFanout<>("CLIENT_BROKER_EXCHANGE");
 
             MessageListener<LoanReply> loanReplyListener = new MessageListener<>(this, "CLIENT_QUEUE");
             loanReplyListener.listen();
@@ -139,7 +143,9 @@ public class LoanClientFrame extends IFrame {
                 listModel.addElement(new RequestReply<LoanRequest, LoanReply>(request, null));
 
                 try {
-                    String corrId = loanRequestSender.send(request, null);
+//                    String corrId = loanRequestSender.send(request, null);
+                    String corrId = loanRequestSenderFanout.send(request, null);
+
                     corrMap.put(corrId, request);
                 } catch (IOException e) {
                     e.printStackTrace();
