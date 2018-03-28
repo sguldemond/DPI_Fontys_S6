@@ -33,6 +33,8 @@ public class JMSBankFrame extends IFrame implements ActionListener {
 	private DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>> listModel = new DefaultListModel<RequestReply<BankInterestRequest, BankInterestReply>>();
 
     private MessageSender<BankInterestReply> bankInterestReplySender;
+    private MessageListener<BankInterestRequest> bankInterestRequestListener;
+
     private String[] banks = { "ABN", "ING", "RABO" };
     private String activeBank = banks[0];
 
@@ -113,14 +115,13 @@ public class JMSBankFrame extends IFrame implements ActionListener {
 			public void actionPerformed(ActionEvent e) {
 				RequestReply<BankInterestRequest, BankInterestReply> rr = list.getSelectedValue();
 				double interest = Double.parseDouble((tfReply.getText()));
-				BankInterestReply reply = new BankInterestReply(interest,activeBank);
-				if (rr!= null && reply != null){
+				BankInterestReply reply = new BankInterestReply(interest, activeBank);
+				if (rr != null && reply != null){
 					rr.setReply(reply);
 	                list.repaint();
-					// TODO: sent JMS message with the reply to Loan Broker
 
                     try {
-                        bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()), null);
+                        bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()));
                     } catch (IOException e1) {
                         e1.printStackTrace();
                     }
@@ -156,12 +157,6 @@ public class JMSBankFrame extends IFrame implements ActionListener {
         listModel.addElement(requestReply);
     }
 
-    private void startListener() throws IOException, TimeoutException {
-        MessageListener<BankInterestRequest> bankInterestRequestListener = new MessageListener<>(this,activeBank + "_QUEUE");
-        bankInterestRequestListener.listen();
-        System.out.println("CURRENT QUEUE NAME: " + bankInterestRequestListener.getQueueName());
-    }
-
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		JComboBox cb = (JComboBox)e.getSource();
@@ -174,4 +169,10 @@ public class JMSBankFrame extends IFrame implements ActionListener {
             e1.printStackTrace();
         }
     }
+
+	private void startListener() throws IOException, TimeoutException {
+        if(bankInterestRequestListener != null) bankInterestRequestListener.close();
+		bankInterestRequestListener = new MessageListener<>(this,activeBank + "_QUEUE");
+		bankInterestRequestListener.listen();
+	}
 }

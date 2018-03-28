@@ -14,23 +14,25 @@ import java.util.concurrent.TimeoutException;
 public class MessageListener<T extends Serializable> {
     private String queueName;
     private Channel channel;
+    private Connection connection;
 
     private IFrame frame;
 
     public MessageListener(IFrame frame, String queueName) throws IOException, TimeoutException {
+        this.frame = frame;
         this.queueName = queueName;
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
-        Connection connection = factory.newConnection();
+        connection = factory.newConnection();
 
         channel = connection.createChannel();
-        channel.queueDeclare(queueName, false, false, false, null);
-
-        this.frame = frame;
+        channel.queueDeclare(this.queueName, false, false, false, null);
     }
 
     public void listen() throws IOException {
+        System.out.println(" [*] Waiting for messages on '" + queueName + "'...");
+
         Consumer consumer = new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body)
@@ -38,10 +40,9 @@ public class MessageListener<T extends Serializable> {
                 try {
                     T requestReply = (T) SerializeUtil.deserialize(body);
 
-                    System.out.println(" [x] Received '" + requestReply.toString() + "' with corrId '" + properties.getCorrelationId() + "'");
+                    System.out.println(" [x] Received '" + requestReply.toString() + "' on queueName '" + queueName + "'");
 
                     frame.add(requestReply, properties.getCorrelationId());
-
                 } catch (ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -52,5 +53,11 @@ public class MessageListener<T extends Serializable> {
 
     public String getQueueName() {
         return queueName;
+    }
+
+    public void close() throws IOException, TimeoutException {
+        channel.close();
+        connection.close();
+        System.out.println(" [*] Stopped listening to '" + queueName + "'!");
     }
 }

@@ -52,11 +52,11 @@ public class LoanBrokerFrame extends IFrame {
 	 */
 	public LoanBrokerFrame() {
         try {
-            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "LOAN_QUEUE");
+            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "BROKER_QUEUE");
             loanRequestListener.listen();
 
-            MessageListener<BankInterestReply> bankInterestReplyListener = new MessageListener<>(this, "BROKER_QUEUE");
-            bankInterestReplyListener.listen();
+//            MessageListener<BankInterestReply> bankInterestReplyListener = new MessageListener<>(this, "BROKER_EXCHANGE");
+//            bankInterestReplyListener.listen();
         } catch (IOException | TimeoutException e) {
             e.printStackTrace();
         }
@@ -115,10 +115,11 @@ public class LoanBrokerFrame extends IFrame {
                 	queueName = "ING_QUEUE";
 				}
 
-				// TODO: send multiple messages
+				// TODO: multiple sender objects, one for each bank
+				// TODO: send message to multiple banks
 
                 MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>(queueName);
-                bankInterestRequestSender.send(bankInterestRequest, corrId, null);
+                bankInterestRequestSender.send(bankInterestRequest, corrId);
 
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
@@ -128,10 +129,10 @@ public class LoanBrokerFrame extends IFrame {
             add((LoanRequest) corrMap.get(corrId), bankReply);
 
             try {
-                LoanReply loanReply = new LoanReply(bankReply.getInterest(), null);
+                LoanReply loanReply = new LoanReply(bankReply.getInterest(), bankReply.getQuoteId());
 
                 MessageSender<LoanReply> loanReplySender = new MessageSender<>("CLIENT_QUEUE");
-                loanReplySender.send(loanReply, corrId, null);
+                loanReplySender.send(loanReply, corrId);
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }
