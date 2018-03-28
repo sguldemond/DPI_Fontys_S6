@@ -53,7 +53,7 @@ public class LoanClientFrame extends IFrame {
      */
     public LoanClientFrame() {
         try {
-            loanRequestSender = new MessageSender<>("LOAN_QUEUE");
+            loanRequestSender = new MessageSender<>("BROKER_QUEUE");
 
             MessageListener<LoanReply> loanReplyListener = new MessageListener<>(this, "CLIENT_QUEUE");
             loanReplyListener.listen();
@@ -137,10 +137,9 @@ public class LoanClientFrame extends IFrame {
 
                 LoanRequest request = new LoanRequest(ssn, amount, time);
                 listModel.addElement(new RequestReply<LoanRequest, LoanReply>(request, null));
-                // TODO:  send the JMS with request to Loan Broker
 
                 try {
-                    String corrId = loanRequestSender.send(request, null, null);
+                    String corrId = loanRequestSender.send(request, null);
                     corrMap.put(corrId, request);
                 } catch (IOException e) {
                     e.printStackTrace();
