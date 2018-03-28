@@ -61,7 +61,7 @@ public class JMSBankFrame extends IFrame implements ActionListener {
 	public JMSBankFrame() {
         try {
             startListener();
-            bankInterestReplySender = new MessageSender<>("BROKER_QUEUE");
+            bankInterestReplySender = new MessageSender<>("BANK_BROKER_QUEUE");
         } catch (IOException | TimeoutException e) {
             e.printStackTrace();
         }

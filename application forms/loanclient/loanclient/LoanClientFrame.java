@@ -53,7 +53,7 @@ public class LoanClientFrame extends IFrame {
      */
     public LoanClientFrame() {
         try {
-            loanRequestSender = new MessageSender<>("BROKER_QUEUE");
+            loanRequestSender = new MessageSender<>("CLIENT_BROKER_QUEUE");
 
             MessageListener<LoanReply> loanReplyListener = new MessageListener<>(this, "CLIENT_QUEUE");
             loanReplyListener.listen();

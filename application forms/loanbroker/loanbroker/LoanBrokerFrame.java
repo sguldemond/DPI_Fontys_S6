@@ -57,11 +57,11 @@ public class LoanBrokerFrame extends IFrame {
 	 */
 	public LoanBrokerFrame() {
         try {
-            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "BROKER_QUEUE");
+            MessageListener<LoanRequest> loanRequestListener = new MessageListener<>(this, "CLIENT_BROKER_QUEUE");
             loanRequestListener.listen();
 
-//            MessageListener<BankInterestReply> bankInterestReplyListener = new MessageListener<>(this, "BROKER_EXCHANGE");
-//            bankInterestReplyListener.listen();
+            MessageListener<BankInterestReply> bankInterestReplyListener = new MessageListener<>(this, "BANK_BROKER_QUEUE");
+            bankInterestReplyListener.listen();
         } catch (IOException | TimeoutException e) {
             e.printStackTrace();
         }
