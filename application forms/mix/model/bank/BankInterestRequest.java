@@ -13,6 +13,7 @@ public class BankInterestRequest implements Serializable {
 
     private int amount; // the requested loan amount
     private int time; // the requested loan period
+    private int aggregationId;
 
     public BankInterestRequest() {
         super();
@@ -32,6 +33,12 @@ public class BankInterestRequest implements Serializable {
         this.time = loanRequest.getTime();
     }
 
+    @Override
+    public String toString() {
+        return " amount=" + amount + " time=" + time;
+    }
+
+
     public int getAmount() {
         return amount;
     }
@@ -39,7 +46,6 @@ public class BankInterestRequest implements Serializable {
     public void setAmount(int amount) {
         this.amount = amount;
     }
-
 
     public int getTime() {
         return time;
@@ -49,8 +55,11 @@ public class BankInterestRequest implements Serializable {
         this.time = time;
     }
 
-    @Override
-    public String toString() {
-        return " amount=" + amount + " time=" + time;
+    public int getAggregationId() {
+        return aggregationId;
+    }
+
+    public void setAggregationId(int aggregationId) {
+        this.aggregationId = aggregationId;
     }
 }

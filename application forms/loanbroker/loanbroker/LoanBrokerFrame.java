@@ -6,6 +6,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeoutException;
 
@@ -16,7 +17,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 
-import com.rabbitmq.client.RpcClient;
 import mix.IFrame;
 import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
@@ -34,7 +34,12 @@ public class LoanBrokerFrame extends IFrame {
 
 	private HashMap<String, Serializable> corrMap = new HashMap<>();
 
-	public static void main(String[] args) {
+	private int aggregationId = 0;
+	private HashMap<Integer, Integer[]> aggMap = new HashMap<>();
+    private HashMap<Integer, BankInterestReply[]> receivedReplies = new HashMap<>();
+
+
+    public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -106,30 +111,73 @@ public class LoanBrokerFrame extends IFrame {
 
             try {
                 BankInterestRequest bankInterestRequest = new BankInterestRequest((LoanRequest) component);
+                int amount = bankInterestRequest.getAmount();
+                int time = bankInterestRequest.getTime();
 
-                String queueName;
+                ArrayList<String> bankQueues = new ArrayList<>();
 
-                if(bankInterestRequest.getAmount() > 100) {
-                	queueName = "ABN_QUEUE";
-				} else {
-                	queueName = "ING_QUEUE";
-				}
+				if(amount <= 100000 && time <= 10) {
+                    bankQueues.add("ING_QUEUE");
+                } if(amount >= 200000 && amount <= 300000 && time <= 20) {
+                    bankQueues.add("ABN_QUEUE");
+                } if(amount <= 250000 && time <= 15) {
+                    bankQueues.add("RABO_QUEUE");
+                } else {
+                    System.out.println(" [x] No bank was found who accepted specified values");
+                }
 
-				// TODO: multiple sender objects, one for each bank
-				// TODO: send message to multiple banks
+                for(String queue : bankQueues) {
+				    MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>(queue);
+				    bankInterestRequest.setAggregationId(aggregationId);
+                    bankInterestRequestSender.send(bankInterestRequest, corrId);
 
-                MessageSender<BankInterestRequest> bankInterestRequestSender = new MessageSender<>(queueName);
-                bankInterestRequestSender.send(bankInterestRequest, corrId);
+                    aggMap.put(aggregationId, new Integer[]{bankQueues.size(), 0});
 
+                    receivedReplies.put(aggregationId, new BankInterestReply[bankQueues.size()]);
+                }
+
+                aggregationId++;
             } catch (IOException | TimeoutException e) {
                 e.printStackTrace();
             }
         } else if (component.getClass() == BankInterestReply.class) {
 	        BankInterestReply bankReply = (BankInterestReply) component;
-            add((LoanRequest) corrMap.get(corrId), bankReply);
+
+            BankInterestReply[] replies = receivedReplies.get(bankReply.getAggregationId());
+
+            for(int i = 0; i < replies.length; i++) {
+                if(replies[i] == null) {
+                    replies[i] = bankReply;
+                    if(i+1 == replies.length) {
+                        continue;
+                    }
+                    System.out.println(" [*] Waiting for more replies on aggregation id '" + bankReply.getAggregationId() + "'...");
+                    return;
+                }
+            }
+
+            BankInterestReply bestBankReply = replies[0];
+
+            for(BankInterestReply reply : replies) {
+                if(reply.getInterest() < bestBankReply.getInterest()) {
+                    bestBankReply = reply;
+                }
+            }
+
+            add((LoanRequest) corrMap.get(corrId), bestBankReply);
+
+//            Integer[] er = aggMap.get(bankReply.getAggregationId());
+//            er[1]++;
+//
+//            if(!er[0].equals(er[1])) {
+//                System.out.println(" [*] Waiting for more replies on aggregation id '" + er[1] + "'...");
+//                return;
+//            }
+//
+//            add((LoanRequest) corrMap.get(corrId), bankReply);
 
             try {
-                LoanReply loanReply = new LoanReply(bankReply.getInterest(), bankReply.getQuoteId());
+                LoanReply loanReply = new LoanReply(bestBankReply.getInterest(), bestBankReply.getQuoteId());
 
                 MessageSender<LoanReply> loanReplySender = new MessageSender<>("CLIENT_QUEUE");
                 loanReplySender.send(loanReply, corrId);
