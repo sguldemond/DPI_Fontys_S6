@@ -13,7 +13,6 @@ import java.util.concurrent.TimeoutException;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
-import com.rabbitmq.client.*;
 import mix.IFrame;
 import mix.messaging.MessageListener;
 import mix.messaging.MessageSender;
@@ -62,7 +61,7 @@ public class JMSBankFrame extends IFrame implements ActionListener {
 	public JMSBankFrame() {
         try {
             startListener();
-            bankInterestReplySender = new MessageSender<>("BROKER_QUEUE");
+            bankInterestReplySender = new MessageSender<>("BANK_BROKER_QUEUE");
         } catch (IOException | TimeoutException e) {
             e.printStackTrace();
         }
@@ -121,6 +120,7 @@ public class JMSBankFrame extends IFrame implements ActionListener {
 	                list.repaint();
 
                     try {
+                        reply.setAggregationId(rr.getRequest().getAggregationId());
                         bankInterestReplySender.send(reply, corrMap.get(rr.getRequest()));
                     } catch (IOException e1) {
                         e1.printStackTrace();
